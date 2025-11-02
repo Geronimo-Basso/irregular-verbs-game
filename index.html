@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Irregular Verb Practice</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Use Inter font */
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+        /* Custom styles for input correctness */
+        .correct {
+            border-color: #22c55e; /* green-500 */
+            background-color: #f0fdf4; /* green-50 */
+        }
+        .incorrect {
+            border-color: #ef4444; /* red-500 */
+            background-color: #fef2f2; /* red-50 */
+        }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
+
+    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full max-w-md">
+        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">
+            Irregular Verb Practice
+        </h1>
+
+        <!-- Prompt Area -->
+        <div class="mb-5">
+            <label id="prompt-label" class="text-sm font-medium text-gray-600 mb-1 block">Base Form</label>
+            <div id="prompt-verb" class="text-3xl font-bold text-blue-600 bg-gray-50 p-3 rounded-lg">
+                ...
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="space-y-4">
+            <div>
+                <label id="input-label-1" for="input-1" class="text-sm font-medium text-gray-600">Past Simple</label>
+                <input type="text" id="input-1" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg text-lg" placeholder="Enter past simple...">
+            </div>
+            <div>
+                <label id="input-label-2" for="input-2" class="text-sm font-medium text-gray-600">Past Participle</label>
+                <input type="text" id="input-2" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg text-lg" placeholder="Enter past participle...">
+            </div>
+        </div>
+
+        <!-- Feedback Area -->
+        <div id="feedback" class="mt-5 p-3 rounded-lg text-center font-medium hidden"></div>
+
+        <!-- Button Area -->
+        <div class="mt-6">
+            <button id="check-btn" class="w-full bg-blue-600 text-white p-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition">
+                Check Answer
+            </button>
+            <button id="next-btn" class="w-full bg-gray-700 text-white p-3 rounded-lg text-lg font-semibold hover:bg-gray-800 transition hidden">
+                Next Question
+            </button>
+        </div>
+    </div>
+
+    <script>
+        // --- DATA ---
+        // We embed the CSV data directly into the script
+        const csvData = `Base Form,Past Simple,Past Participle
+beat,beat,beaten
+become,became,become
+begin,began,begun
+bend,bent,bent
+bet,bet,bet
+bite,bit,bitten
+bleed,bled,bled
+blow,blew,blown
+break,broke,broken
+breed,bred,bred
+bring,brought,brought
+build,built,built
+burn,burnt/burned,burnt/burned
+buy,bought,bought
+catch,caught,caught
+choose,chose,chosen
+come,came,come
+cost,cost,cost
+cut,cut,cut
+do,did,done
+dig,dug,dug
+draw,drew,drawn
+dream,dreamt/dreamed,dreamt/dreamed
+drink,drank,drunk
+drive,drove,driven
+eat,ate,eaten
+fall,fell,fallen
+feed,fed,fed
+feel,felt,felt
+fight,fought,fought
+find,found,found
+fly,flew,flown
+forget,forgot,forgotten
+forgive,forgave,forgiven
+freeze,froze,frozen
+get,got,got
+give,gave,given
+go,went,gone
+grow,grew,grown
+have,had,had
+hear,heard,heard
+hide,hid,hidden
+hit,hit,hit
+hold,held,held
+hurt,hurt,hurt
+keep,kept,kept
+know,knew,known
+lay,laid,laid
+lead,led,led
+lean,leant/leaned,leant/leaned
+leave,left,left
+lend,lent,lent
+let,let,let
+lose,lost,lost
+make,made,made
+mean,meant,meant
+meet,met,met
+pay,paid,paid
+put,put,put
+quit,quit,quit
+read,read,read
+ride,rode,ridden
+ring,rang,rung
+rise,rose,risen
+run,ran,run
+say,said,said
+see,saw,seen
+sell,sold,sold
+send,sent,sent
+set,set,set
+shake,shook,shaken
+shine,shone,shone
+shoe,shod,shod
+shoot,shot,shot
+show,showed,shown
+shrink,shrank,shrunk
+shut,shut,shut
+sing,sang,sung
+sink,sank,sunk
+sit,sat,sat
+sleep,slept,slept
+speak,spoke,spoken
+spend,spent,spent
+spill,spilt/spilled,spilt/spilled
+spread,spread,spread
+speed,sped,sped
+stand,stood,stood
+steal,stole,stolen
+stick,stuck,stuck
+sting,stung,stung
+stink,stank,stunk
+swear,swore,sworn
+sweep,swept,swept
+swim,swam,swum
+swing,swung,swung
+take,took,taken
+teach,taught,taught
+tear,tore,torn
+tell,told,told
+think,thought,thought
+throw,threw,thrown
+understand,understood,understood
+wake,woke,woken
+wear,wore,worn
+win,won,won
+write,wrote,written`;
+
+        // --- STATE ---
+        let verbList = [];
+        let currentVerb = {};
+        let quizMode = 0; // 0: guess simple/participle, 1: guess base/participle, 2: guess base/simple
+
+        // --- DOM ELEMENTS ---
+        const promptLabel = document.getElementById('prompt-label');
+        const promptVerb = document.getElementById('prompt-verb');
+        const input1 = document.getElementById('input-1');
+        const input2 = document.getElementById('input-2');
+        const inputLabel1 = document.getElementById('input-label-1');
+        const inputLabel2 = document.getElementById('input-label-2');
+        const checkBtn = document.getElementById('check-btn');
+        const nextBtn = document.getElementById('next-btn');
+        const feedback = document.getElementById('feedback');
+
+        // --- FUNCTIONS ---
+
+        /**
+         * Parses the raw CSV data into the verbList array.
+         */
+        function parseCSV() {
+            const lines = csvData.trim().split('\n');
+            const headers = lines[0].split(',');
+            
+            verbList = lines.slice(1).map(line => {
+                const values = line.split(',');
+                return {
+                    base: values[0].trim(),
+                    simple: values[1].trim(),
+                    participle: values[2].trim()
+                };
+            });
+        }
+
+        /**
+         * Loads a new random question.
+         */
+        function loadQuestion() {
+            // Pick a random verb
+            currentVerb = verbList[Math.floor(Math.random() * verbList.length)];
+            
+            // Pick a random quiz mode (0, 1, or 2)
+            quizMode = Math.floor(Math.random() * 3);
+
+            // Reset UI
+            input1.value = '';
+            input2.value = '';
+            input1.disabled = false;
+            input2.disabled = false;
+            input1.classList.remove('correct', 'incorrect');
+            input2.classList.remove('correct', 'incorrect');
+            feedback.classList.add('hidden');
+            checkBtn.classList.remove('hidden');
+            nextBtn.classList.add('hidden');
+
+            switch (quizMode) {
+                case 0: // Prompt with Base Form
+                    promptLabel.textContent = 'Base Form (V1)';
+                    promptVerb.textContent = currentVerb.base;
+                    inputLabel1.textContent = 'Past Simple (V2)';
+                    input1.placeholder = 'Enter past simple...';
+                    inputLabel2.textContent = 'Past Participle (V3)';
+                    input2.placeholder = 'Enter past participle...';
+                    break;
+                case 1: // Prompt with Past Simple
+                    promptLabel.textContent = 'Past Simple (V2)';
+                    promptVerb.textContent = currentVerb.simple;
+                    inputLabel1.textContent = 'Base Form (V1)';
+                    input1.placeholder = 'Enter base form...';
+                    inputLabel2.textContent = 'Past Participle (V3)';
+                    input2.placeholder = 'Enter past participle...';
+                    break;
+                case 2: // Prompt with Past Participle
+                    promptLabel.textContent = 'Past Participle (V3)';
+                    promptVerb.textContent = currentVerb.participle;
+                    inputLabel1.textContent = 'Base Form (V1)';
+                    input1.placeholder = 'Enter base form...';
+                    inputLabel2.textContent = 'Past Simple (V2)';
+                    input2.placeholder = 'Enter past simple...';
+                    break;
+            }
+        }
+
+        /**
+         * Checks if a user's answer matches one of the possible correct answers.
+         * Handles cases like "burnt/burned".
+         * @param {string} userInput - The user's input.
+         * @param {string} correctAnswers - The correct answer string (e.g., "burnt/burned").
+         * @returns {boolean} - True if the input is correct.
+         */
+        function isAnswerCorrect(userInput, correctAnswers) {
+            const normalizedInput = userInput.trim().toLowerCase();
+            const possibleAnswers = correctAnswers.split('/').map(ans => ans.toLowerCase());
+            return possibleAnswers.includes(normalizedInput);
+        }
+
+        /**
+         * Checks the user's answers and provides feedback.
+         */
+        function checkAnswer() {
+            const userAnswer1 = input1.value;
+            const userAnswer2 = input2.value;
+
+            let answer1, answer2, correct1, correct2;
+
+            // Determine which answers to check based on quizMode
+            switch (quizMode) {
+                case 0: // Prompted with Base
+                    answer1 = currentVerb.simple;
+                    answer2 = currentVerb.participle;
+                    break;
+                case 1: // Prompted with Simple
+                    answer1 = currentVerb.base;
+                    answer2 = currentVerb.participle;
+                    break;
+                case 2: // Prompted with Participle
+                    answer1 = currentVerb.base;
+                    answer2 = currentVerb.simple;
+                    break;
+            }
+
+            correct1 = isAnswerCorrect(userAnswer1, answer1);
+            correct2 = isAnswerCorrect(userAnswer2, answer2);
+
+            // Apply visual feedback to inputs
+            input1.classList.toggle('correct', correct1);
+            input1.classList.toggle('incorrect', !correct1);
+            
+            input2.classList.toggle('correct', correct2);
+            input2.classList.toggle('incorrect', !correct2);
+
+            // Disable inputs
+            input1.disabled = true;
+            input2.disabled = true;
+
+            // Show feedback message
+            feedback.classList.remove('hidden');
+            if (correct1 && correct2) {
+                feedback.textContent = 'Correct! Well done.';
+                feedback.className = 'mt-5 p-3 rounded-lg text-center font-medium bg-green-100 text-green-800';
+            } else {
+                let feedbackText = 'Not quite. The correct answers are: ';
+                if (!correct1) feedbackText += ` ${answer1} `;
+                if (!correct2) feedbackText += ` ${answer2} `;
+                
+                // Show the full correct answer
+                feedback.innerHTML = `
+                    Not quite. The correct forms are: <br>
+                    <strong>${currentVerb.base} / ${currentVerb.simple} / ${currentVerb.participle}</strong>
+                `;
+                feedback.className = 'mt-5 p-3 rounded-lg text-center font-medium bg-red-100 text-red-800';
+            }
+
+            // Toggle buttons
+            checkBtn.classList.add('hidden');
+            nextBtn.classList.remove('hidden');
+        }
+
+        // --- INITIALIZATION ---
+        document.addEventListener('DOMContentLoaded', () => {
+            parseCSV();
+            loadQuestion();
+
+            checkBtn.addEventListener('click', checkAnswer);
+            nextBtn.addEventListener('click', loadQuestion);
+
+            // Allow pressing Enter to check answer
+            input1.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    checkBtn.click();
+                }
+            });
+            input2.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') {
+                    checkBtn.click();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
