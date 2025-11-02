@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Irregular Verb Practice</title>
-    <!-- Load Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <style>
         /* Use Inter font */
@@ -29,36 +28,34 @@
             Irregular Verb Practice
         </h1>
 
-        <!-- Error Area -->
         <div id="error-container" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
             <strong class="font-bold">Error:</strong>
             <span class="block sm:inline" id="error-message"></span>
         </div>
 
-        <!-- Prompt Area -->
-        <div class="mb-5">
-            <label id="prompt-label" class="text-sm font-medium text-gray-600 mb-1 block">Base Form</label>
-            <div id="prompt-verb" class="text-3xl font-bold text-blue-600 bg-gray-50 p-3 rounded-lg">
-                ...
-            </div>
-        </div>
-
-        <!-- Input Area -->
-        <div class="space-y-4">
+        <div id="verb-fields-container" class="space-y-4 mb-5">
+            
             <div>
-                <label id="input-label-1" for="input-1" class="text-sm font-medium text-gray-600">Past Simple</label>
-                <input type="text" id="input-1" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg text-lg" placeholder="Enter past simple...">
+                <label id="label-base" for="input-base" class="text-sm font-medium text-gray-600">Base Form (V1)</label>
+                <div id="container-base" class="mt-1">
+                    </div>
             </div>
-            <div>
-                <label id="input-label-2" for="input-2" class="text-sm font-medium text-gray-600">Past Participle</label>
-                <input type="text" id="input-2" class="mt-1 block w-full p-3 border border-gray-300 rounded-lg text-lg" placeholder="Enter past participle...">
-            </div>
-        </div>
 
-        <!-- Feedback Area -->
+            <div>
+                <label id="label-simple" for="input-simple" class="text-sm font-medium text-gray-600">Past Simple (V2)</label>
+                <div id="container-simple" class="mt-1">
+                    </div>
+            </div>
+
+            <div>
+                <label id="label-participle" for="input-participle" class="text-sm font-medium text-gray-600">Past Participle (V3)</label>
+                <div id="container-participle" class="mt-1">
+                    </div>
+            </div>
+
+        </div>
         <div id="feedback" class="mt-5 p-3 rounded-lg text-center font-medium hidden"></div>
 
-        <!-- Button Area -->
         <div class="mt-6">
             <button id="check-btn" class="w-full bg-blue-600 text-white p-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition">
                 Check Answer
@@ -76,18 +73,25 @@
         // --- STATE ---
         let verbList = [];
         let currentVerb = {};
-        let quizMode = 0; // 0: guess simple/participle, 1: guess base/participle, 2: guess base/simple
+        let quizMode = 0; // 0: prompt base, 1: prompt simple, 2: prompt participle
+        
+        // Input elements will be dynamically created, so we declare them here
+        let inputBase, inputSimple, inputParticiple; 
 
         // --- DOM ELEMENTS ---
         const appContainer = document.getElementById('app-container');
         const errorContainer = document.getElementById('error-container');
         const errorMessage = document.getElementById('error-message');
-        const promptLabel = document.getElementById('prompt-label');
-        const promptVerb = document.getElementById('prompt-verb');
-        const input1 = document.getElementById('input-1');
-        const input2 = document.getElementById('input-2');
-        const inputLabel1 = document.getElementById('input-label-1');
-        const inputLabel2 = document.getElementById('input-label-2');
+        
+        // NEW: Get containers and labels for the 3 fields
+        const containerBase = document.getElementById('container-base');
+        const containerSimple = document.getElementById('container-simple');
+        const containerParticiple = document.getElementById('container-participle');
+        
+        const labelBase = document.getElementById('label-base');
+        const labelSimple = document.getElementById('label-simple');
+        const labelParticiple = document.getElementById('label-participle');
+
         const checkBtn = document.getElementById('check-btn');
         const nextBtn = document.getElementById('next-btn');
         const feedback = document.getElementById('feedback');
@@ -96,6 +100,7 @@
 
         /**
          * Displays a fatal error message and hides the app.
+         * (Unchanged)
          */
         function showFatalError(message) {
             appContainer.style.display = 'none'; // Hide the main app UI
@@ -117,6 +122,7 @@
 
         /**
          * Fetches and parses the CSV data into the verbList array.
+         * (Unchanged)
          */
         async function loadAndParseCSV() {
             try {
@@ -153,118 +159,191 @@
             }
         }
 
+        // --- NEW HELPER FUNCTIONS ---
+        
+        /**
+         * Creates the HTML for an input field.
+         * @param {string} id - The ID for the input element.
+         * @param {string} placeholder - The placeholder text.
+         * @returns {string} - The HTML string for the input.
+         */
+        function createInputHTML(id, placeholder) {
+            return `<input type="text" id="${id}" class="block w-full p-3 border border-gray-300 rounded-lg text-lg" placeholder="${placeholder}">`;
+        }
+
+        /**
+         * Creates the HTML for the prompt box.
+         * @param {string} text - The verb text to display.
+         * @returns {string} - The HTML string for the prompt.
+         */
+        function createPromptHTML(text) {
+            return `
+                <div class="flex items-center justify-between bg-gray-50 p-3 rounded-lg">
+                    <div id="prompt-verb" class="text-3xl font-bold text-blue-600 cursor-pointer" title="Click to hear pronunciation">
+                        ${text}
+                    </div>
+                    <button id="speak-btn" class="p-2 rounded-full text-gray-500 hover:bg-gray-200 hover:text-blue-600 transition" aria-label="Pronounce word" title="Pronounce word">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                          <path stroke-linecap="round" stroke-linejoin="round" d="M15.536 8.464a5 5 0 010 7.072m2.828-9.9a9 9 0 010 12.728M5.586 15H4a1 1 0 01-1-1v-4a1 1 0 011-1h1.586l4.707-4.707a1 1 0 011.707.707v14.586a1 1 0 01-1.707.707L5.586 15z" />
+                        </svg>
+                    </button>
+                </div>
+            `;
+        }
+
+        /**
+         * Handles the Enter keypress on any input.
+         */
+        function handleEnter(e) {
+            if (e.key === 'Enter') {
+                checkBtn.click();
+            }
+        }
+
+        // --- UPDATED FUNCTIONS ---
+
         /**
          * Loads a new random question.
+         * (This function is heavily modified)
          */
         function loadQuestion() {
-            // Pick a random verb
+            // Pick a random verb and quiz mode
             currentVerb = verbList[Math.floor(Math.random() * verbList.length)];
-            
-            // Pick a random quiz mode (0, 1, or 2)
             quizMode = Math.floor(Math.random() * 3);
 
             // Reset UI
-            input1.value = '';
-            input2.value = '';
-            input1.disabled = false;
-            input2.disabled = false;
-            input1.classList.remove('correct', 'incorrect');
-            input2.classList.remove('correct', 'incorrect');
             feedback.classList.add('hidden');
             checkBtn.classList.remove('hidden');
             nextBtn.classList.add('hidden');
 
+            // Reset labels to default style
+            labelBase.className = 'text-sm font-medium text-gray-600';
+            labelSimple.className = 'text-sm font-medium text-gray-600';
+            labelParticiple.className = 'text-sm font-medium text-gray-600';
+
+            // Dynamically build the UI based on the quiz mode
             switch (quizMode) {
                 case 0: // Prompt with Base Form
-                    promptLabel.textContent = 'Base Form (V1)';
-                    promptVerb.textContent = currentVerb.base;
-                    inputLabel1.textContent = 'Past Simple (V2)';
-                    input1.placeholder = 'Enter past simple...';
-                    inputLabel2.textContent = 'Past Participle (V3)';
-                    input2.placeholder = 'Enter past participle...';
+                    containerBase.innerHTML = createPromptHTML(currentVerb.base);
+                    containerSimple.innerHTML = createInputHTML('input-simple', 'Enter past simple...');
+                    containerParticiple.innerHTML = createInputHTML('input-participle', 'Enter past participle...');
+                    labelBase.className += ' text-blue-600 font-bold'; // Highlight prompt label
                     break;
                 case 1: // Prompt with Past Simple
-                    promptLabel.textContent = 'Past Simple (V2)';
-                    promptVerb.textContent = currentVerb.simple;
-                    inputLabel1.textContent = 'Base Form (V1)';
-                    input1.placeholder = 'Enter base form...';
-                    inputLabel2.textContent = 'Past Participle (V3)';
-                    input2.placeholder = 'Enter past participle...';
+                    containerBase.innerHTML = createInputHTML('input-base', 'Enter base form...');
+                    containerSimple.innerHTML = createPromptHTML(currentVerb.simple);
+                    containerParticiple.innerHTML = createInputHTML('input-participle', 'Enter past participle...');
+                    labelSimple.className += ' text-blue-600 font-bold'; // Highlight prompt label
                     break;
                 case 2: // Prompt with Past Participle
-                    promptLabel.textContent = 'Past Participle (V3)';
-                    promptVerb.textContent = currentVerb.participle;
-                    inputLabel1.textContent = 'Base Form (V1)';
-                    input1.placeholder = 'Enter base form...';
-                    inputLabel2.textContent = 'Past Simple (V2)';
-                    input2.placeholder = 'Enter past simple...';
+                    containerBase.innerHTML = createInputHTML('input-base', 'Enter base form...');
+                    containerSimple.innerHTML = createInputHTML('input-simple', 'Enter past simple...');
+                    containerParticiple.innerHTML = createPromptHTML(currentVerb.participle);
+                    labelParticiple.className += ' text-blue-600 font-bold'; // Highlight prompt label
                     break;
+            }
+
+            // --- Re-select inputs and add listeners ---
+            
+            // 1. Get references to the newly created inputs (some will be null)
+            inputBase = document.getElementById('input-base');
+            inputSimple = document.getElementById('input-simple');
+            inputParticiple = document.getElementById('input-participle');
+
+            // 2. Add 'Enter' key listener to whichever inputs exist
+            if (inputBase) inputBase.addEventListener('keypress', handleEnter);
+            if (inputSimple) inputSimple.addEventListener('keypress', handleEnter);
+            if (inputParticiple) inputParticiple.addEventListener('keypress', handleEnter);
+
+            // 3. Add listeners for the new speak button and prompt text
+            // (These elements only exist in the "prompt" slot)
+            const speakBtn = document.getElementById('speak-btn');
+            const promptVerb = document.getElementById('prompt-verb');
+            if (speakBtn && promptVerb) {
+                speakBtn.addEventListener('click', speakWord);
+                promptVerb.addEventListener('click', speakWord);
             }
         }
 
         /**
          * Checks if a user's answer matches one of the possible correct answers.
-         * Handles cases like "burnt/burned".
-         * @param {string} userInput - The user's input.
-         * @param {string} correctAnswers - The correct answer string (e.g., "burnt/burned").
-         * @returns {boolean} - True if the input is correct.
+         * (Unchanged)
          */
         function isAnswerCorrect(userInput, correctAnswers) {
+            if (userInput === null || userInput === undefined) return false; // Handle null inputs
             const normalizedInput = userInput.trim().toLowerCase();
             const possibleAnswers = correctAnswers.split('/').map(ans => ans.toLowerCase());
             return possibleAnswers.includes(normalizedInput);
         }
+        
+        /**
+         * Pronounces the text in the prompt-verb element.
+         * (Unchanged - it finds the element with id="prompt-verb", which we create)
+         */
+        function speakWord() {
+            // Find the prompt-verb element, which is dynamically created
+            const promptVerb = document.getElementById('prompt-verb');
+            if (!promptVerb) return; // Safety check
+            
+            const textToSpeak = promptVerb.textContent;
+            if (!textToSpeak || textToSpeak === '...') {
+                return; // Don't speak if loading
+            }
+
+            // Check for browser support
+            if (!('speechSynthesis' in window)) {
+                alert('Sorry, your browser does not support speech synthesis.');
+                return;
+            }
+
+            // Clean up text (e.g., "burnt/burned" -> "burnt")
+            const cleanedText = textToSpeak.split('/')[0].trim();
+
+            const utterance = new SpeechSynthesisUtterance(cleanedText);
+            utterance.lang = 'en-US'; // Set language for correct accent
+            window.speechSynthesis.speak(utterance);
+        }
 
         /**
          * Checks the user's answers and provides feedback.
+         * (This function is heavily modified)
          */
         function checkAnswer() {
-            const userAnswer1 = input1.value;
-            const userAnswer2 = input2.value;
+            let allCorrect = true;
 
-            let answer1, answer2, correct1, correct2;
-
-            // Determine which answers to check based on quizMode
-            switch (quizMode) {
-                case 0: // Prompted with Base
-                    answer1 = currentVerb.simple;
-                    answer2 = currentVerb.participle;
-                    break;
-                case 1: // Prompted with Simple
-                    answer1 = currentVerb.base;
-                    answer2 = currentVerb.participle;
-                    break;
-                case 2: // Prompted with Participle
-                    answer1 = currentVerb.base;
-                    answer2 = currentVerb.simple;
-                    break;
+            // Check each field only if it was an input (i.e., not the prompt)
+            
+            if (quizMode !== 0) { // Base form was an input
+                const correct = isAnswerCorrect(inputBase.value, currentVerb.base);
+                inputBase.classList.toggle('correct', correct);
+                inputBase.classList.toggle('incorrect', !correct);
+                inputBase.disabled = true;
+                if (!correct) allCorrect = false;
             }
 
-            correct1 = isAnswerCorrect(userAnswer1, answer1);
-            correct2 = isAnswerCorrect(userAnswer2, answer2);
+            if (quizMode !== 1) { // Past Simple was an input
+                const correct = isAnswerCorrect(inputSimple.value, currentVerb.simple);
+                inputSimple.classList.toggle('correct', correct);
+                inputSimple.classList.toggle('incorrect', !correct);
+                inputSimple.disabled = true;
+                if (!correct) allCorrect = false;
+            }
 
-            // Apply visual feedback to inputs
-            input1.classList.toggle('correct', correct1);
-            input1.classList.toggle('incorrect', !correct1);
-            
-            input2.classList.toggle('correct', correct2);
-            input2.classList.toggle('incorrect', !correct2);
-
-            // Disable inputs
-            input1.disabled = true;
-            input2.disabled = true;
+            if (quizMode !== 2) { // Past Participle was an input
+                const correct = isAnswerCorrect(inputParticiple.value, currentVerb.participle);
+                inputParticiple.classList.toggle('correct', correct);
+                inputParticiple.classList.toggle('incorrect', !correct);
+                inputParticiple.disabled = true;
+                if (!correct) allCorrect = false;
+            }
 
             // Show feedback message
             feedback.classList.remove('hidden');
-            if (correct1 && correct2) {
+            if (allCorrect) {
                 feedback.textContent = 'Correct! Well done.';
                 feedback.className = 'mt-5 p-3 rounded-lg text-center font-medium bg-green-100 text-green-800';
             } else {
-                let feedbackText = 'Not quite. The correct answers are: ';
-                if (!correct1) feedbackText += ` ${answer1} `;
-                if (!correct2) feedbackText += ` ${answer2} `;
-                
-                // Show the full correct answer
+                // Always show the full, correct answer on failure
                 feedback.innerHTML = `
                     Not quite. The correct forms are: <br>
                     <strong>${currentVerb.base} / ${currentVerb.simple} / ${currentVerb.participle}</strong>
@@ -278,28 +357,20 @@
         }
 
         // --- INITIALIZATION ---
+        // (Modified to remove listeners for elements that are now dynamic)
         document.addEventListener('DOMContentLoaded', async () => {
-            // First, load and parse the data from the CSV
             await loadAndParseCSV(); 
             
-            // Only initialize the app if verbs were successfully loaded
             if (verbList.length > 0) {
+                // Load the first question (which will also set up all dynamic listeners)
                 loadQuestion();
 
                 checkBtn.addEventListener('click', checkAnswer);
                 nextBtn.addEventListener('click', loadQuestion);
-
-                // Allow pressing Enter to check answer
-                input1.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        checkBtn.click();
-                    }
-                });
-                input2.addEventListener('keypress', (e) => {
-                    if (e.key === 'Enter') {
-                        checkBtn.click();
-                    }
-                });
+                
+                // Note: Listeners for inputs, speakBtn, and promptVerb
+                // are now added INSIDE the loadQuestion() function
+                // because those elements are created dynamically.
             }
         });
     </script>
