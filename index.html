@@ -24,10 +24,16 @@
 </head>
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
-    <div class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full max-w-md">
+    <div id="app-container" class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full max-w-md">
         <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">
             Irregular Verb Practice
         </h1>
+
+        <!-- Error Area -->
+        <div id="error-container" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+            <strong class="font-bold">Error:</strong>
+            <span class="block sm:inline" id="error-message"></span>
+        </div>
 
         <!-- Prompt Area -->
         <div class="mb-5">
@@ -64,115 +70,8 @@
     </div>
 
     <script>
-        // --- DATA ---
-        // We embed the CSV data directly into the script
-        const csvData = `Base Form,Past Simple,Past Participle
-beat,beat,beaten
-become,became,become
-begin,began,begun
-bend,bent,bent
-bet,bet,bet
-bite,bit,bitten
-bleed,bled,bled
-blow,blew,blown
-break,broke,broken
-breed,bred,bred
-bring,brought,brought
-build,built,built
-burn,burnt/burned,burnt/burned
-buy,bought,bought
-catch,caught,caught
-choose,chose,chosen
-come,came,come
-cost,cost,cost
-cut,cut,cut
-do,did,done
-dig,dug,dug
-draw,drew,drawn
-dream,dreamt/dreamed,dreamt/dreamed
-drink,drank,drunk
-drive,drove,driven
-eat,ate,eaten
-fall,fell,fallen
-feed,fed,fed
-feel,felt,felt
-fight,fought,fought
-find,found,found
-fly,flew,flown
-forget,forgot,forgotten
-forgive,forgave,forgiven
-freeze,froze,frozen
-get,got,got
-give,gave,given
-go,went,gone
-grow,grew,grown
-have,had,had
-hear,heard,heard
-hide,hid,hidden
-hit,hit,hit
-hold,held,held
-hurt,hurt,hurt
-keep,kept,kept
-know,knew,known
-lay,laid,laid
-lead,led,led
-lean,leant/leaned,leant/leaned
-leave,left,left
-lend,lent,lent
-let,let,let
-lose,lost,lost
-make,made,made
-mean,meant,meant
-meet,met,met
-pay,paid,paid
-put,put,put
-quit,quit,quit
-read,read,read
-ride,rode,ridden
-ring,rang,rung
-rise,rose,risen
-run,ran,run
-say,said,said
-see,saw,seen
-sell,sold,sold
-send,sent,sent
-set,set,set
-shake,shook,shaken
-shine,shone,shone
-shoe,shod,shod
-shoot,shot,shot
-show,showed,shown
-shrink,shrank,shrunk
-shut,shut,shut
-sing,sang,sung
-sink,sank,sunk
-sit,sat,sat
-sleep,slept,slept
-speak,spoke,spoken
-spend,spent,spent
-spill,spilt/spilled,spilt/spilled
-spread,spread,spread
-speed,sped,sped
-stand,stood,stood
-steal,stole,stolen
-stick,stuck,stuck
-sting,stung,stung
-stink,stank,stunk
-swear,swore,sworn
-sweep,swept,swept
-swim,swam,swum
-swing,swung,swung
-take,took,taken
-teach,taught,taught
-tear,tore,torn
-tell,told,told
-think,thought,thought
-throw,threw,thrown
-understand,understood,understood
-wake,woke,woken
-wear,wore,worn
-win,won,won
-write,wrote,written`;
+        // --- CONSTANTS ---
+        const VERB_FILE = 'irregular-verbs.csv';
 
         // --- STATE ---
         let verbList = [];
@@ -180,6 +79,9 @@ write,wrote,written`;
         let quizMode = 0; // 0: guess simple/participle, 1: guess base/participle, 2: guess base/simple
 
         // --- DOM ELEMENTS ---
+        const appContainer = document.getElementById('app-container');
+        const errorContainer = document.getElementById('error-container');
+        const errorMessage = document.getElementById('error-message');
         const promptLabel = document.getElementById('prompt-label');
         const promptVerb = document.getElementById('prompt-verb');
         const input1 = document.getElementById('input-1');
@@ -193,20 +95,62 @@ write,wrote,written`;
         // --- FUNCTIONS ---
 
         /**
-         * Parses the raw CSV data into the verbList array.
+         * Displays a fatal error message and hides the app.
          */
-        function parseCSV() {
-            const lines = csvData.trim().split('\n');
-            const headers = lines[0].split(',');
+        function showFatalError(message) {
+            appContainer.style.display = 'none'; // Hide the main app UI
             
-            verbList = lines.slice(1).map(line => {
-                const values = line.split(',');
-                return {
-                    base: values[0].trim(),
-                    simple: values[1].trim(),
-                    participle: values[2].trim()
-                };
-            });
+            // Create a new error box to show outside the app container
+            const errorBox = document.createElement('div');
+            errorBox.className = "bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-xl shadow-lg w-full max-w-md";
+            errorBox.setAttribute('role', 'alert');
+            errorBox.innerHTML = `
+                <strong class="font-bold">App Failed to Load</strong>
+                <p class="block mt-2">${message}</p>
+                <p class="text-sm mt-2">
+                    <strong>Note:</strong> If you are running this file locally (from <code>file:///</code>), 
+                    it will not work due to browser security rules. You must use a local server.
+                </p>
+            `;
+            document.body.appendChild(errorBox);
+        }
+
+        /**
+         * Fetches and parses the CSV data into the verbList array.
+         */
+        async function loadAndParseCSV() {
+            try {
+                const response = await fetch(VERB_FILE);
+                if (!response.ok) {
+                    throw new Error(`Could not find '${VERB_FILE}'. Status: ${response.status}`);
+                }
+                const csvData = await response.text();
+                
+                const lines = csvData.trim().split('\n');
+                if (lines.length <= 1) {
+                    throw new Error("CSV file is empty or has no verb data.");
+                }
+                
+                verbList = lines.slice(1).map(line => {
+                    const values = line.split(',');
+                    if (values.length >= 3) {
+                        return {
+                            base: values[0].trim(),
+                            simple: values[1].trim(),
+                            participle: values[2].trim()
+                        };
+                    }
+                    return null; // Handle potentially empty or malformed lines
+                }).filter(verb => verb !== null); // Filter out any bad lines
+
+                if (verbList.length === 0) {
+                     throw new Error("CSV file loaded, but no valid verb data was found.");
+                }
+
+            } catch (error) {
+                console.error('Failed to load or parse CSV:', error);
+                showFatalError(`Could not load or read <code>${VERB_FILE}</code>. <br> ${error.message}`);
+            }
         }
 
         /**
@@ -334,24 +278,29 @@ write,wrote,written`;
         }
 
         // --- INITIALIZATION ---
-        document.addEventListener('DOMContentLoaded', () => {
-            parseCSV();
-            loadQuestion();
+        document.addEventListener('DOMContentLoaded', async () => {
+            // First, load and parse the data from the CSV
+            await loadAndParseCSV(); 
+            
+            // Only initialize the app if verbs were successfully loaded
+            if (verbList.length > 0) {
+                loadQuestion();
 
-            checkBtn.addEventListener('click', checkAnswer);
-            nextBtn.addEventListener('click', loadQuestion);
+                checkBtn.addEventListener('click', checkAnswer);
+                nextBtn.addEventListener('click', loadQuestion);
 
-            // Allow pressing Enter to check answer
-            input1.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    checkBtn.click();
-                }
-            });
-            input2.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    checkBtn.click();
-                }
-            });
+                // Allow pressing Enter to check answer
+                input1.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        checkBtn.click();
+                    }
+                });
+                input2.addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        checkBtn.click();
+                    }
+                });
+            }
         });
     </script>
 </body>
