@@ -10,6 +10,18 @@
         body {
             font-family: 'Inter', sans-serif;
         }
+        /* Tabs */
+        .tabs { display:flex; gap:8px; margin-bottom:16px; }
+        .tab-btn { padding:8px 12px; border-radius:8px; background:#f3f4f6; cursor:pointer; border:1px solid #e5e7eb; }
+        .tab-btn.active { background:#1d4ed8; color:white; border-color:#1e40af; }
+        /* Flashcard */
+        .card-scene { perspective:1000px; }
+        .card { width:100%; height:180px; position:relative; transform-style:preserve-3d; transition: transform 0.6s; cursor:pointer; }
+        .card.is-flipped { transform: rotateY(180deg); }
+        .card-face { position:absolute; inset:0; backface-visibility:hidden; display:flex; align-items:center; justify-content:center; padding:16px; border-radius:12px; box-shadow:0 6px 18px rgba(15,23,42,0.08); }
+        .card-face.front { background:linear-gradient(180deg,#fff,#f8fafc); font-size:1.25rem; font-weight:600; color:#0f172a; }
+        .card-face.back { background:linear-gradient(180deg,#f8fafc,#ffffff); transform:rotateY(180deg); font-size:1rem; color:#0f172a; }
+        .flash-controls { display:flex; gap:8px; margin-top:12px; }
         /* Custom styles for input correctness */
         .correct {
             border-color: #22c55e; /* green-500 */
@@ -24,51 +36,76 @@
 <body class="bg-gray-100 flex items-center justify-center min-h-screen p-4">
 
     <div id="app-container" class="bg-white p-6 sm:p-8 rounded-xl shadow-lg w-full max-w-md">
-        <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">
-            Irregular Verb Practice
-        </h1>
-
-        <div id="error-container" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-            <strong class="font-bold">Error:</strong>
-            <span class="block sm:inline" id="error-message"></span>
+        <div class="tabs" role="tablist" aria-label="App tabs">
+            <button id="tab-btn-irregular" class="tab-btn active" role="tab" aria-selected="true">Irregular Verbs</button>
+            <button id="tab-btn-flash" class="tab-btn" role="tab" aria-selected="false">Flashcards</button>
         </div>
 
-        <div id="verb-fields-container" class="space-y-4 mb-5">
-            
-            <div>
-                <label id="label-base" for="input-base" class="text-sm font-medium text-gray-600">Base Form (V1)</label>
-                <div id="container-base" class="mt-1">
-                    </div>
+        <!-- Irregular verbs panel -->
+        <div id="panel-irregular">
+            <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">
+                Irregular Verb Practice
+            </h1>
+
+            <div id="error-container" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
+                <strong class="font-bold">Error:</strong>
+                <span class="block sm:inline" id="error-message"></span>
             </div>
 
-            <div>
-                <label id="label-simple" for="input-simple" class="text-sm font-medium text-gray-600">Past Simple (V2)</label>
-                <div id="container-simple" class="mt-1">
-                    </div>
+            <div id="verb-fields-container" class="space-y-4 mb-5">
+                <div>
+                    <label id="label-base" for="input-base" class="text-sm font-medium text-gray-600">Base Form (V1)</label>
+                    <div id="container-base" class="mt-1"></div>
+                </div>
+
+                <div>
+                    <label id="label-simple" for="input-simple" class="text-sm font-medium text-gray-600">Past Simple (V2)</label>
+                    <div id="container-simple" class="mt-1"></div>
+                </div>
+
+                <div>
+                    <label id="label-participle" for="input-participle" class="text-sm font-medium text-gray-600">Past Participle (V3)</label>
+                    <div id="container-participle" class="mt-1"></div>
+                </div>
             </div>
 
-            <div>
-                <label id="label-participle" for="input-participle" class="text-sm font-medium text-gray-600">Past Participle (V3)</label>
-                <div id="container-participle" class="mt-1">
-                    </div>
-            </div>
+            <div id="feedback" class="mt-5 p-3 rounded-lg text-center font-medium hidden"></div>
 
+            <div class="mt-6">
+                <button id="check-btn" class="w-full bg-blue-600 text-white p-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition">
+                    Check Answer
+                </button>
+                <button id="next-btn" class="w-full bg-gray-700 text-white p-3 rounded-lg text-lg font-semibold hover:bg-gray-800 transition hidden">
+                    Next Question
+                </button>
+            </div>
         </div>
-        <div id="feedback" class="mt-5 p-3 rounded-lg text-center font-medium hidden"></div>
 
-        <div class="mt-6">
-            <button id="check-btn" class="w-full bg-blue-600 text-white p-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition">
-                Check Answer
-            </button>
-            <button id="next-btn" class="w-full bg-gray-700 text-white p-3 rounded-lg text-lg font-semibold hover:bg-gray-800 transition hidden">
-                Next Question
-            </button>
+        <!-- Flashcards panel (hidden by default) -->
+        <div id="panel-flashcards" class="hidden">
+            <h1 class="text-2xl font-bold text-center text-gray-800 mb-6">Flashcards - Use of English</h1>
+
+            <div id="flash-error" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert"></div>
+
+            <div class="card-scene">
+                <div id="flash-card" class="card">
+                    <div class="card-face front" id="card-front">...</div>
+                    <div class="card-face back" id="card-back">...</div>
+                </div>
+            </div>
+
+            <div class="flash-controls">
+                <button id="btn-flip" class="tab-btn">Flip</button>
+                <button id="btn-speak-flash" class="tab-btn" aria-label="Pronounce word" title="Pronounce word">🔊</button>
+                <button id="btn-next" class="tab-btn">✓ Next</button>
+                <button id="btn-randomize" class="tab-btn">Shuffle</button>
+            </div>
         </div>
     </div>
 
     <script>
         // --- CONSTANTS ---
-        const VERB_FILE = 'irregular-verbs.csv';
+        const VERB_FILE = 'data/irregular-verbs.csv';
 
         // --- STATE ---
         let verbList = [];
@@ -372,6 +409,124 @@
                 // are now added INSIDE the loadQuestion() function
                 // because those elements are created dynamically.
             }
+        });
+
+        // --- Flashcards / Tabs ---
+        const USE_FILE = 'data/use-of-english.csv';
+        const USE_FALLBACK = 'data/use-of-english - all.csv';
+        let flashList = [];
+        let flashIndex = 0;
+        const panelIrregular = document.getElementById('panel-irregular');
+        const panelFlash = document.getElementById('panel-flashcards');
+        const tabBtnIrregular = document.getElementById('tab-btn-irregular');
+        const tabBtnFlash = document.getElementById('tab-btn-flash');
+
+        const flashCard = document.getElementById('flash-card');
+        const cardFront = document.getElementById('card-front');
+        const cardBack = document.getElementById('card-back');
+        const btnFlip = document.getElementById('btn-flip');
+        const btnSpeak = document.getElementById('btn-speak-flash');
+        const btnNext = document.getElementById('btn-next');
+        const btnShuffle = document.getElementById('btn-randomize');
+        const flashError = document.getElementById('flash-error');
+
+        function switchToTab(tabName) {
+            if (tabName === 'flash') {
+                panelIrregular.classList.add('hidden');
+                panelFlash.classList.remove('hidden');
+                tabBtnFlash.classList.add('active');
+                tabBtnIrregular.classList.remove('active');
+            } else {
+                panelIrregular.classList.remove('hidden');
+                panelFlash.classList.add('hidden');
+                tabBtnFlash.classList.remove('active');
+                tabBtnIrregular.classList.add('active');
+            }
+        }
+
+        async function loadUseCSV() {
+            flashError.classList.add('hidden');
+            flashList = [];
+            try {
+                let res = await fetch(USE_FILE);
+                if (!res.ok) {
+                    // try fallback
+                    res = await fetch(USE_FALLBACK);
+                    if (!res.ok) throw new Error('Could not load use-of-english CSV');
+                }
+                const txt = await res.text();
+                const lines = txt.trim().split(/\r?\n/).filter(l => l.trim());
+                for (const line of lines) {
+                    // split at first comma
+                    const idx = line.indexOf(',');
+                    if (idx === -1) continue;
+                    const term = line.slice(0, idx).trim();
+                    const def = line.slice(idx + 1).trim();
+                    if (term) flashList.push({term, def});
+                }
+                if (flashList.length === 0) throw new Error('No flashcards parsed');
+                shuffleFlashcards();
+                flashIndex = 0;
+                showFlashcard(flashIndex);
+            } catch (err) {
+                console.error('Flashcards load error', err);
+                flashError.textContent = 'Could not load flashcards: ' + err.message;
+                flashError.classList.remove('hidden');
+            }
+        }
+
+        function showFlashcard(i) {
+            if (!flashList.length) return;
+            const item = flashList[i % flashList.length];
+            cardFront.textContent = item.term;
+            cardBack.textContent = item.def;
+            flashCard.classList.remove('is-flipped');
+        }
+
+        function flipFlashcard() {
+            flashCard.classList.toggle('is-flipped');
+        }
+
+        function speakFlashcard() {
+            if (!cardFront) return;
+            const text = cardFront.textContent || '';
+            const cleaned = text.split('/')[0].trim();
+            if (!cleaned) return;
+            if (!('speechSynthesis' in window)) {
+                alert('Sorry, your browser does not support speech synthesis.');
+                return;
+            }
+            const u = new SpeechSynthesisUtterance(cleaned);
+            u.lang = 'en-US';
+            window.speechSynthesis.cancel();
+            window.speechSynthesis.speak(u);
+        }
+
+        function nextFlashcard() {
+            flashIndex = (flashIndex + 1) % flashList.length;
+            showFlashcard(flashIndex);
+        }
+
+        function shuffleFlashcards() {
+            for (let i = flashList.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [flashList[i], flashList[j]] = [flashList[j], flashList[i]];
+            }
+        }
+
+        // Wire up tab and flash controls after DOM ready
+        document.addEventListener('DOMContentLoaded', () => {
+            tabBtnIrregular.addEventListener('click', () => switchToTab('irregular'));
+            tabBtnFlash.addEventListener('click', async () => {
+                switchToTab('flash');
+                if (flashList.length === 0) await loadUseCSV();
+            });
+
+            if (flashCard) flashCard.addEventListener('click', flipFlashcard);
+            if (btnFlip) btnFlip.addEventListener('click', flipFlashcard);
+            if (btnSpeak) btnSpeak.addEventListener('click', (e) => { e.stopPropagation(); speakFlashcard(); });
+            if (btnNext) btnNext.addEventListener('click', nextFlashcard);
+            if (btnShuffle) btnShuffle.addEventListener('click', () => { shuffleFlashcards(); flashIndex = 0; showFlashcard(flashIndex); });
         });
     </script>
 </body>
