@@ -75,6 +75,7 @@
                 <button id="check-btn" class="w-full bg-blue-600 text-white p-3 rounded-lg text-lg font-semibold hover:bg-blue-700 transition">
                     Check Answer
                 </button>
+                <button id="speak-inputs-btn" class="w-full bg-indigo-600 text-white p-3 rounded-lg text-lg font-semibold hover:bg-indigo-700 transition mt-3 hidden" title="Pronounce your answers">🔊 Pronounce Answers</button>
                 <button id="next-btn" class="w-full bg-gray-700 text-white p-3 rounded-lg text-lg font-semibold hover:bg-gray-800 transition hidden">
                     Next Question
                 </button>
@@ -132,6 +133,7 @@
         const checkBtn = document.getElementById('check-btn');
         const nextBtn = document.getElementById('next-btn');
         const feedback = document.getElementById('feedback');
+        const speakInputsBtn = document.getElementById('speak-inputs-btn');
 
         // --- FUNCTIONS ---
 
@@ -292,6 +294,14 @@
             if (inputSimple) inputSimple.addEventListener('keypress', handleEnter);
             if (inputParticiple) inputParticiple.addEventListener('keypress', handleEnter);
 
+            // 2b. Listen for changes to toggle the speak button when all inputs are filled
+            if (inputBase) inputBase.addEventListener('input', updateSpeakForInputs);
+            if (inputSimple) inputSimple.addEventListener('input', updateSpeakForInputs);
+            if (inputParticiple) inputParticiple.addEventListener('input', updateSpeakForInputs);
+
+            // Initialize speak button hidden state for this question
+            if (speakInputsBtn) speakInputsBtn.classList.add('hidden');
+
             // 3. Add listeners for the new speak button and prompt text
             // (These elements only exist in the "prompt" slot)
             const speakBtn = document.getElementById('speak-btn');
@@ -340,6 +350,50 @@
             utterance.lang = 'en-US'; // Set language for correct accent
             window.speechSynthesis.speak(utterance);
         }
+
+            /**
+             * Shows/hides the speak button depending on whether all input fields are filled.
+             */
+            function updateSpeakForInputs() {
+                if (!speakInputsBtn) return;
+                const inputs = [inputBase, inputSimple, inputParticiple].filter(Boolean);
+                if (inputs.length === 0) {
+                    speakInputsBtn.classList.add('hidden');
+                    return;
+                }
+                const allFilled = inputs.every(i => i.value && i.value.trim() !== '');
+                if (allFilled) speakInputsBtn.classList.remove('hidden');
+                else speakInputsBtn.classList.add('hidden');
+            }
+
+            /**
+             * Pronounces the forms that are currently shown/entered in the three fields.
+             */
+            function speakUserInputs() {
+                // Build three strings: base, simple, participle from inputs or prompt text
+                const getText = (inpId, promptSelector, fallback) => {
+                    const inp = document.getElementById(inpId);
+                    if (inp && inp.value && inp.value.trim() !== '') return inp.value.trim().split('/')[0];
+                    const promptEl = document.querySelector(promptSelector);
+                    if (promptEl && promptEl.textContent) return promptEl.textContent.trim().split('/')[0];
+                    return fallback || '';
+                };
+
+                const b = getText('input-base', '#container-base #prompt-verb', currentVerb.base);
+                const s = getText('input-simple', '#container-simple #prompt-verb', currentVerb.simple);
+                const p = getText('input-participle', '#container-participle #prompt-verb', currentVerb.participle);
+
+                const phrase = [b, s, p].filter(Boolean).join(', ');
+                if (!phrase) return;
+                if (!('speechSynthesis' in window)) {
+                    alert('Sorry, your browser does not support speech synthesis.');
+                    return;
+                }
+                const u = new SpeechSynthesisUtterance(phrase);
+                u.lang = 'en-US';
+                window.speechSynthesis.cancel();
+                window.speechSynthesis.speak(u);
+            }
 
         /**
          * Checks the user's answers and provides feedback.
@@ -404,6 +458,7 @@
 
                 checkBtn.addEventListener('click', checkAnswer);
                 nextBtn.addEventListener('click', loadQuestion);
+                if (speakInputsBtn) speakInputsBtn.addEventListener('click', speakUserInputs);
                 
                 // Note: Listeners for inputs, speakBtn, and promptVerb
                 // are now added INSIDE the loadQuestion() function
